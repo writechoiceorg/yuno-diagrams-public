@@ -1,8 +1,12 @@
+/**
+ * Shared Diagram Logic
+ * Handles scaling, lightbox signaling, and initialization.
+ */
+
 function initDiagram(diagramWidth, diagramHeight, srcPath, srcTitle) {
   const run = () => {
     const vp = document.querySelector('.viewport');
     const diagram = document.querySelector('.diagram');
-    const svg = document.querySelector('.layer-svg');
 
     if (!vp || !diagram) return;
 
@@ -10,11 +14,6 @@ function initDiagram(diagramWidth, diagramHeight, srcPath, srcTitle) {
     diagram.style.width = diagramWidth + 'px';
     diagram.style.height = diagramHeight + 'px';
     
-    if (svg) {
-      svg.style.width = diagramWidth + 'px';
-      svg.style.height = diagramHeight + 'px';
-    }
-
     // Check if loaded inside lightbox
     const isLightbox = new URLSearchParams(window.location.search).get('lightbox') === 'true';
     if (isLightbox) {
@@ -45,12 +44,18 @@ function initDiagram(diagramWidth, diagramHeight, srcPath, srcTitle) {
 
     vp.addEventListener('click', () => {
       if (isLightbox) return;
-      window.parent.postMessage({ type: 'diagram-expand', src: srcPath, title: srcTitle }, '*');
+      window.parent.postMessage({ 
+        type: 'diagram-expand', 
+        src: srcPath, 
+        title: srcTitle 
+      }, '*');
     });
 
     window.addEventListener('resize', scale);
     scale();
+    // Ensure scaling is correct after font loading or layout shifts
     setTimeout(scale, 150);
+    setTimeout(scale, 500);
   };
 
   if (document.readyState === 'loading') {
