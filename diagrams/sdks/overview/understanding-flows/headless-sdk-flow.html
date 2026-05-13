@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Yuno – Headless SDK Flow</title>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../../shared/diagrams.css?v=2">
+</head>
+<body class="is-diagram">
+  <div class="viewport">
+    <div class="diagram">
+      <!-- ── SVG Layer ───────────────────────────────────────────── -->
+      <svg class="layer-svg" style="width: 1600px; height: 874px;" viewBox="0 0 1600 874" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <filter id="card-shadow"> <feDropShadow dx="0" dy="2" stdDeviation="8" flood-color="rgba(0,0,0,0.07)"/> </filter>
+          <filter id="spark-glow" x="-120%" y="-120%" width="340%" height="340%"> 
+            <feGaussianBlur stdDeviation="2.5" result="blur"/> 
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge> 
+          </filter>
+          <clipPath id="diagram-clip"> <rect x="40" y="48" width="1520" height="778" rx="10"/> </clipPath>
+        </defs>
+
+        <!-- Lane Background & Grid -->
+        <rect x="40" y="48" width="1520" height="778" rx="10" fill="#ffffff" filter="url(#card-shadow)" opacity="0.8"/>
+        
+        <g stroke="#a3a3a3" stroke-width="1" stroke-dasharray="5 6">
+          <line x1="40" y1="231" x2="1560" y2="231"/>
+          <line x1="40" y1="425" x2="1560" y2="425"/>
+          <line x1="40" y1="619" x2="1560" y2="619"/>
+          <line x1="181" y1="48" x2="181" y2="826"/>
+        </g>
+
+        <!-- Connector Paths -->
+        <!-- Col 1: Server -> Yuno API (Create Customer) -->
+        <path id="v1" d="M 263,377 L 263,473" stroke="#64748b" stroke-width="1.5" fill="none"/>
+        <!-- Col 2: Client -> Server (Initiate Checkout) -->
+        <path id="v2" d="M 393,188 L 393,279" stroke="#64748b" stroke-width="1.5" fill="none"/>
+        <!-- Col 3: Server -> Yuno API (Create Session) -->
+        <path id="v3" d="M 523,377 L 523,473" stroke="#64748b" stroke-width="1.5" fill="none"/>
+        <!-- Col 5: Client -> SDK (Generate Token) -->
+        <path id="v5" d="M 783,188 L 783,673" stroke="#64748b" stroke-width="1.5" fill="none"/>
+        <!-- Col 6: SDK -> Client (Return OTT) -->
+        <path id="v6" d="M 913,673 L 913,188" stroke="#64748b" stroke-width="1.5" fill="none" stroke-dasharray="4 4"/>
+        <!-- Col 7: Client -> Server (Process Payment) -->
+        <path id="v7" d="M 1043,188 L 1043,279" stroke="#64748b" stroke-width="1.5" fill="none"/>
+        <!-- Col 8: Server -> Yuno API (Create Payment) -->
+        <path id="v8" d="M 1173,377 L 1173,473" stroke="#64748b" stroke-width="1.5" fill="none"/>
+        <!-- Col 9: Yuno API -> Client (Action Required) -->
+        <path id="v9" d="M 1303,473 L 1303,188" stroke="#64748b" stroke-width="1.5" fill="none" stroke-dasharray="4 4"/>
+        <!-- Col 10: Client -> SDK (Handle Actions) -->
+        <path id="v10" d="M 1433,188 L 1433,673" stroke="#64748b" stroke-width="1.5" fill="none"/>
+
+        <!-- Animated Sparks -->
+        <g clip-path="url(#diagram-clip)">
+          <circle r="3.5" fill="#3e4fe0" filter="url(#spark-glow)"> <animateMotion dur="0.8s" begin="0s" repeatCount="indefinite"> <mpath href="#v1"/> </animateMotion> </circle>
+          <circle r="3.5" fill="#3e4fe0" filter="url(#spark-glow)"> <animateMotion dur="0.6s" begin="1s" repeatCount="indefinite"> <mpath href="#v2"/> </animateMotion> </circle>
+          <circle r="3.5" fill="#3e4fe0" filter="url(#spark-glow)"> <animateMotion dur="0.8s" begin="1.8s" repeatCount="indefinite"> <mpath href="#v3"/> </animateMotion> </circle>
+          <circle r="3.5" fill="#3e4fe0" filter="url(#spark-glow)"> <animateMotion dur="1s" begin="2.8s" repeatCount="indefinite"> <mpath href="#v5"/> </animateMotion> </circle>
+          <circle r="3" fill="#f97316" filter="url(#spark-glow)"> <animateMotion dur="1s" begin="4s" repeatCount="indefinite"> <mpath href="#v6"/> </animateMotion> </circle>
+          <circle r="3.5" fill="#3e4fe0" filter="url(#spark-glow)"> <animateMotion dur="0.6s" begin="5.2s" repeatCount="indefinite"> <mpath href="#v7"/> </animateMotion> </circle>
+          <circle r="3.5" fill="#3e4fe0" filter="url(#spark-glow)"> <animateMotion dur="0.8s" begin="6s" repeatCount="indefinite"> <mpath href="#v8"/> </animateMotion> </circle>
+          <circle r="3" fill="#f97316" filter="url(#spark-glow)"> <animateMotion dur="1s" begin="7s" repeatCount="indefinite"> <mpath href="#v9"/> </animateMotion> </circle>
+          <circle r="3.5" fill="#3e4fe0" filter="url(#spark-glow)"> <animateMotion dur="1s" begin="8.2s" repeatCount="indefinite"> <mpath href="#v10"/> </animateMotion> </circle>
+        </g>
+      </svg>
+
+      <!-- ── Lane Labels ──────────────────────────────────────────── -->
+      <div class="lane-label-container" style="top:48px; height:183px;">
+        <svg class="lane-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><circle cx="12" cy="18" r="1"/></svg>
+        <div class="lane-label">Merchant client</div>
+      </div>
+      <div class="lane-label-container" style="top:231px; height:194px;">
+        <svg class="lane-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+        <div class="lane-label">Merchant server</div>
+      </div>
+      <div class="lane-label-container" style="top:425px; height:194px;">
+        <svg class="lane-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        <div class="lane-label">Yuno server</div>
+      </div>
+      <div class="lane-label-container" style="top:619px; height:207px;">
+        <svg class="lane-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+        <div class="lane-label">Yuno SDK</div>
+      </div>
+
+      <!-- ── Step Nodes ────────────────────────────────────────────── -->
+      <!-- Col 1 -->
+      <div class="step merchant-server" style="left:211px; top:279px;"><div class="bubble">1</div>Create Customer<div class="dot bottom"></div></div>
+      <div class="step yuno-server" style="left:211px; top:473px;">Creates Customer<div class="dot top"></div></div>
+
+      <!-- Col 2 -->
+      <div class="step" style="left:341px; top:90px;"><div class="bubble">2</div>Initiate Checkout<div class="dot bottom"></div></div>
+      <div class="step merchant-server" style="left:341px; top:279px;">Request session<div class="dot top"></div></div>
+
+      <!-- Col 3 -->
+      <div class="step merchant-server" style="left:471px; top:279px;">Create Checkout session<div class="dot bottom"></div></div>
+      <div class="step yuno-server" style="left:471px; top:473px;">Generates session<div class="dot top"></div></div>
+
+      <!-- Col 4 -->
+      <div class="step self" style="left:601px; top:90px;"><div class="bubble">3</div>Collect Information<br>(Custom UI)</div>
+
+      <!-- Col 5 -->
+      <div class="step" style="left:731px; top:90px; overflow-wrap:break-word;"><div class="bubble">4</div>Generate Token<br>generateToken<br>(details)<div class="dot bottom"></div></div>
+      <div class="step yuno-sdk" style="left:731px; top:673px;">Process Tokenization<div class="dot top"></div></div>
+
+      <!-- Col 6 -->
+      <div class="step yuno-sdk" style="left:861px; top:673px;">Return One-time Token<div class="dot top"></div></div>
+      <div class="step" style="left:861px; top:90px;">Receive Token<div class="dot bottom"></div></div>
+
+      <!-- Col 7 -->
+      <div class="step" style="left:991px; top:90px;"><div class="bubble">5</div>Process Payment<div class="dot bottom"></div></div>
+      <div class="step merchant-server" style="left:991px; top:279px;">Receive Token<div class="dot top"></div></div>
+
+      <!-- Col 8 -->
+      <div class="step merchant-server" style="left:1121px; top:279px;"><div class="bubble">6</div>Create Payment API<div class="dot bottom"></div></div>
+      <div class="step yuno-server" style="left:1121px; top:473px;">Process Payment<div class="dot top"></div></div>
+
+      <!-- Col 9 -->
+      <div class="step yuno-server" style="left:1251px; top:473px;"><div class="bubble">7</div>Action Required: true<div class="dot top"></div></div>
+      <div class="step" style="left:1251px; top:90px;">Handle Payment Actions<div class="dot bottom"></div></div>
+
+      <!-- Col 10 -->
+      <div class="step" style="left:1381px; top:90px;">Handle Actions (3DS)<div class="dot bottom"></div></div>
+      <div class="step yuno-sdk" style="left:1381px; top:673px;">Render 3DS Challenge<div class="dot top"></div></div>
+
+    </div>
+  </div>
+
+  <script src="../../../shared/diagrams.js"></script>
+  <script>
+    initDiagram(1600, 874, 'https://writechoiceorg.github.io/yuno-diagrams-public/diagrams/sdks/overview/understanding-flows/headless-sdk-flow.html', 'Headless SDK Flow');
+  </script>
+</body>
+</html>
