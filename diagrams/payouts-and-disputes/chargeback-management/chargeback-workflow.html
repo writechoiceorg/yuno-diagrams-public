@@ -3,157 +3,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Yuno – Chargeback Management Flow</title>
+<title>Yuno – Chargeback Workflow</title>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../shared/diagrams.css">
 <style>
-/* ── CSS matching diagrams.css pattern ─────────────────────────────── */
-:root {
-  --primary:  #3e4fe0;
-  --merchant: #8b5cf6;
-  --issuer:   #0891b2;
-  --acquirer: #6366f1;
-  --yuno-bdr: #c4b5fd;
-  --green:    #15803d;
-  --red:      #dc2626;
-  --text:     #0a0a0a;
-  --slate:    #64748b;
-  --bg:       #f5f5f5;
-}
-
-* { box-sizing: border-box; margin: 0; padding: 0; }
-
-body {
-  background: #e5e7eb;
-  display: flex; align-items: center; justify-content: center;
-  min-height: 100vh; padding: 24px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, 'Helvetica Neue', Arial, sans-serif;
-}
-
-.scroll-wrapper {
-  overflow-x: auto; overflow-y: hidden;
-  border-radius: 12px;
-  box-shadow: 0 8px 40px rgba(0,0,0,0.14);
-  max-width: 100%;
-}
-
-.diagram {
-  position: relative; width: 1540px; height: 874px;
-  background: var(--bg); border-radius: 12px;
-  overflow: hidden; flex-shrink: 0;
-}
-
-.layer-svg {
-  position: absolute; inset: 0;
-  width: 1540px; height: 874px;
-  pointer-events: none;
-}
-
-/* ── Lane labels (matches diagrams.css) ── */
-.lane-label-container {
-  position: absolute;
-  left: 40px; width: 141px;
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  gap: 10px;
-}
-.lane-icon {
-  width: 22px; height: 22px;
-  color: var(--slate); opacity: 0.8; flex-shrink: 0;
-}
-.lane-label {
-  font-size: 13px; font-weight: 700;
-  color: var(--text); line-height: 1.4;
-  text-align: center; white-space: nowrap;
-}
-
-/* ── Step boxes (matches diagrams.css exactly) ── */
-.step {
-  position: absolute;
-  width: 150px; height: 110px;
-  background: #ffffff;
-  border: 1.5px solid var(--primary); border-radius: 8px;
-  box-shadow: -4px -4px 10px 0 #ffffff, 4px 4px 8px 0 rgba(0,0,0,0.10);
-  display: flex; align-items: center; justify-content: center;
-  padding: 10px 8px;
-  font-size: 12px; font-weight: 600; color: var(--text);
-  text-align: center; line-height: 1.25;
-  z-index: 2;
-}
-
-/* Lane variants — all use the same primary blue */
-.step.issuer   { border-color: var(--primary); }
-.step.acquirer { border-color: var(--primary); }
-.step.merchant { border-color: var(--primary); }
-.step.yuno-hl  { background: #eef0fd; border-color: var(--primary); color: var(--primary); }
-
-/* Outcome variants — no colour coding, all use default blue */
-.step.green { border-color: var(--primary); background: #fff; }
-.step.red   { border-color: var(--primary); background: #fff; }
-
-/* ── Numbered bubble ── */
-.bubble {
-  position: absolute; top: -10px; left: -10px;
-  width: 20px; height: 20px;
-  background: var(--primary); color: #fff;
-  border-radius: 999px; font-size: 10px; font-weight: 700;
-  display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.15); z-index: 3;
-}
-.step.merchant  .bubble { background: var(--merchant); }
-.step.issuer    .bubble { background: var(--issuer); }
-.step.acquirer  .bubble { background: var(--acquirer); }
-.step.yuno-hl   .bubble { background: var(--primary); color: #fff; }
-
-/* ── Connection dots (matches diagrams.css) ── */
-.dot {
-  position: absolute;
-  width: 6px; height: 6px;
-  background: var(--primary); border-radius: 99px;
-}
-.dot.top    { top: -3px;    left: calc(50% - 3px); }
-.dot.bottom { bottom: -3px; left: calc(50% - 3px); }
-.dot.left   { left: -3px;   top:  calc(50% - 3px); }
-.dot.right  { right: -3px;  top:  calc(50% - 3px); }
-
-/* Dot colors per lane — all primary blue */
-.step.issuer   .dot { background: var(--primary); }
-.step.acquirer .dot { background: var(--primary); }
-.step.merchant .dot { background: var(--primary); }
-.step.yuno-hl  .dot { background: var(--primary); }
-.step.green    .dot { background: var(--primary); }
-.step.red      .dot { background: var(--primary); }
-
-/* ── Phase column tags ── */
-.phase-tag {
-  position: absolute; top: 22px; width: 104px;
-  text-align: center; font-size: 9px; font-weight: 700;
-  color: var(--slate); letter-spacing: 0.07em; text-transform: uppercase;
-}
-.phase-tag.win   { color: var(--slate); }
-.phase-tag.lose  { color: var(--slate); }
+  /* Overrides: wider boxes to fit chargeback text */
+  body.is-diagram .step { width: 150px; height: 110px; }
+  body.is-diagram .step.yuno-hl { background: #eef0fd; border-color: var(--primary); color: var(--primary); }
+  body.is-diagram .step.yuno-hl .dot { background: var(--primary); }
 </style>
 </head>
-<body>
-<div class="scroll-wrapper">
-<div class="diagram">
+<body class="is-diagram">
+<div class="viewport">
+<div class="diagram" style="width:1540px; height:874px;">
 
-<!-- ══════════════════════════════════════════════════════════════
-     SVG LAYER — card bg · lane lines · connector paths · sparks
-     Canvas: 1540×874  Label panel: x=40→181  Content: x=181→1500
-
-     5 lanes (156px each, y=48→826):
-       Lane 0 Customer  cy=126  box_top=77   box_bottom=175
-       Lane 1 Issuer    cy=282  box_top=233  box_bottom=331
-       Lane 2 Acquirer  cy=438  box_top=389  box_bottom=487
-       Lane 3 Yuno      cy=594  box_top=545  box_bottom=643
-       Lane 4 Merchant  cy=749  box_top=700  box_bottom=798
-
-     4 columns (104px boxes, 241px gap):
-       Col 1  cx=263  left=211
-       Col 2  cx=583  left=531
-       Col 3  cx=903  left=851
-       Col 4  cx=1223 left=1171
-     ══════════════════════════════════════════════════════════════ -->
-<svg class="layer-svg" viewBox="0 0 1540 874" xmlns="http://www.w3.org/2000/svg">
+<svg class="layer-svg" style="width:1540px; height:874px;" viewBox="0 0 1540 874" xmlns="http://www.w3.org/2000/svg">
 <defs>
   <filter id="card-shadow">
     <feDropShadow dx="0" dy="2" stdDeviation="8" flood-color="rgba(0,0,0,0.07)"/>
@@ -180,29 +44,25 @@ body {
   <line x1="181" y1="48"  x2="181"  y2="826"/>
 </g>
 
-
 <!-- Phase divider between col 2 and col 3 (decision point) -->
 <line x1="822" y1="48" x2="822" y2="826"
       stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="6 5" opacity="0.4"/>
 
-<!-- ══ COL 1  cx=263  (downward chain) ══
-     box_top=cy-55  box_bottom=cy+55
-     Customer cy=126 top=71 bot=181 | Issuer cy=282 top=227 bot=337
-     Acquirer cy=438 top=383 bot=493 | Yuno cy=594 top=539 bot=649 | Merchant cy=749 top=694 bot=804 -->
+<!-- COL 1  cx=303 -->
 <path id="p1a" d="M 303,181 L 303,227" stroke="#64748b" stroke-width="1.5" fill="none"/>
 <path id="p1b" d="M 303,337 L 303,383" stroke="#64748b" stroke-width="1.5" fill="none"/>
 <path id="p1c" d="M 303,493 L 303,539" stroke="#64748b" stroke-width="1.5" fill="none"/>
 <path id="p1d" d="M 303,649 L 303,694" stroke="#64748b" stroke-width="1.5" fill="none"/>
 
-<!-- Merchant col1 → col2 (right edge of col1=228+150=378, left edge of col2=548) -->
+<!-- Merchant col1 → col2 -->
 <path id="ph"  d="M 378,749 L 548,749" stroke="#64748b" stroke-width="1.5" fill="none"/>
 
-<!-- ══ COL 2  cx=623  (upward: Merchant → Issuer) ══ -->
+<!-- COL 2  cx=623 -->
 <path id="p2a" d="M 623,694 L 623,649" stroke="#64748b" stroke-width="1.5" fill="none"/>
 <path id="p2b" d="M 623,539 L 623,493" stroke="#64748b" stroke-width="1.5" fill="none"/>
 <path id="p2c" d="M 623,383 L 623,337" stroke="#64748b" stroke-width="1.5" fill="none"/>
 
-<!-- ══ COL 3  cx=943  (Merchant wins, downward, skips Yuno) ══ -->
+<!-- COL 3  cx=943 -->
 <path id="p3a" d="M 943,337 L 943,383" stroke="#64748b" stroke-width="1.5" fill="none"/>
 <path id="p3b" d="M 943,493 L 943,694" stroke="#64748b" stroke-width="1.5" fill="none"/>
 
@@ -211,79 +71,68 @@ body {
 <!-- Issuer col2 → col4 (up, across, drops at col4) -->
 <path id="phi24b" d="M 623,227 L 623,208 L 1263,208 L 1263,227" stroke="#64748b" stroke-width="1.5" fill="none"/>
 
-<!-- ══ COL 4  cx=1263  (Customer wins) ══ -->
+<!-- COL 4  cx=1263 -->
 <path id="p4b" d="M 1263,337 L 1263,383" stroke="#64748b" stroke-width="1.5" fill="none"/>
 <path id="p4c" d="M 1263,493 L 1263,694" stroke="#64748b" stroke-width="1.5" fill="none"/>
 
-<!-- Return arc: right edge Merchant col4=1188+150=1338 → right edge Customer col4=1338 -->
+<!-- Return arc: Merchant col4 right → Customer col4 right -->
 <path id="p4d"
   d="M 1338,749 L 1438,749 Q 1450,749 1450,737 L 1450,138 Q 1450,126 1438,126 L 1338,126"
   stroke="#64748b" stroke-width="1.5" fill="none"/>
 
-<!-- ══ SPARK ANIMATIONS — uniform speed ~180px/s
-     58px gaps → 0.32s | 216px horizontals/long verticals → 1.2s | arc ~1055px → 5.8s ══ -->
+<!-- SPARK ANIMATIONS -->
 <g clip-path="url(#diagram-clip)">
-  <!-- Col 1: downward chain -->
   <circle r="3.5" fill="#3e4fe0" filter="url(#spark-glow)">
-    <animateMotion dur="0.32s" begin="0s"   repeatCount="indefinite"><mpath href="#p1a"/></animateMotion>
+    <animateMotion dur="0.32s" begin="0s"    repeatCount="indefinite"><mpath href="#p1a"/></animateMotion>
   </circle>
   <circle r="3.5" fill="#3e4fe0" filter="url(#spark-glow)">
-    <animateMotion dur="0.32s" begin="0.5s" repeatCount="indefinite"><mpath href="#p1b"/></animateMotion>
+    <animateMotion dur="0.32s" begin="0.5s"  repeatCount="indefinite"><mpath href="#p1b"/></animateMotion>
   </circle>
   <circle r="3.5" fill="#3e4fe0" filter="url(#spark-glow)">
-    <animateMotion dur="0.32s" begin="1.0s" repeatCount="indefinite"><mpath href="#p1c"/></animateMotion>
+    <animateMotion dur="0.32s" begin="1.0s"  repeatCount="indefinite"><mpath href="#p1c"/></animateMotion>
   </circle>
   <circle r="3.5" fill="#3e4fe0" filter="url(#spark-glow)">
-    <animateMotion dur="0.32s" begin="1.5s" repeatCount="indefinite"><mpath href="#p1d"/></animateMotion>
+    <animateMotion dur="0.32s" begin="1.5s"  repeatCount="indefinite"><mpath href="#p1d"/></animateMotion>
   </circle>
-  <!-- Merchant horizontal col1→col2 -->
   <circle r="3.5" fill="#3e4fe0" filter="url(#spark-glow)">
-    <animateMotion dur="1.2s"  begin="2.0s" repeatCount="indefinite"><mpath href="#ph"/></animateMotion>
+    <animateMotion dur="1.2s"  begin="2.0s"  repeatCount="indefinite"><mpath href="#ph"/></animateMotion>
   </circle>
-  <!-- Col 2: upward (orange) -->
-  <circle r="3" fill="#3e4fe0" filter="url(#spark-glow)">
+  <circle r="3"   fill="#3e4fe0" filter="url(#spark-glow)">
     <animateMotion dur="0.32s" begin="0.25s" repeatCount="indefinite"><mpath href="#p2a"/></animateMotion>
   </circle>
-  <circle r="3" fill="#3e4fe0" filter="url(#spark-glow)">
+  <circle r="3"   fill="#3e4fe0" filter="url(#spark-glow)">
     <animateMotion dur="0.32s" begin="0.75s" repeatCount="indefinite"><mpath href="#p2b"/></animateMotion>
   </circle>
-  <circle r="3" fill="#3e4fe0" filter="url(#spark-glow)">
+  <circle r="3"   fill="#3e4fe0" filter="url(#spark-glow)">
     <animateMotion dur="0.32s" begin="1.25s" repeatCount="indefinite"><mpath href="#p2c"/></animateMotion>
   </circle>
-  <!-- Issuer horizontal branches -->
-  <circle r="3" fill="#3e4fe0" filter="url(#spark-glow)">
-    <animateMotion dur="2.0s"  begin="0s"   repeatCount="indefinite"><mpath href="#phi24a"/></animateMotion>
+  <circle r="3"   fill="#3e4fe0" filter="url(#spark-glow)">
+    <animateMotion dur="2.0s"  begin="0s"    repeatCount="indefinite"><mpath href="#phi24a"/></animateMotion>
   </circle>
-  <circle r="3" fill="#3e4fe0" filter="url(#spark-glow)">
-    <animateMotion dur="3.8s"  begin="0.6s" repeatCount="indefinite"><mpath href="#phi24b"/></animateMotion>
+  <circle r="3"   fill="#3e4fe0" filter="url(#spark-glow)">
+    <animateMotion dur="3.8s"  begin="0.6s"  repeatCount="indefinite"><mpath href="#phi24b"/></animateMotion>
   </circle>
-  <!-- Col 3 -->
-  <circle r="3" fill="#3e4fe0" filter="url(#spark-glow)">
-    <animateMotion dur="0.32s" begin="0s"   repeatCount="indefinite"><mpath href="#p3a"/></animateMotion>
+  <circle r="3"   fill="#3e4fe0" filter="url(#spark-glow)">
+    <animateMotion dur="0.32s" begin="0s"    repeatCount="indefinite"><mpath href="#p3a"/></animateMotion>
   </circle>
-  <circle r="3" fill="#3e4fe0" filter="url(#spark-glow)">
-    <animateMotion dur="1.2s"  begin="0.4s" repeatCount="indefinite"><mpath href="#p3b"/></animateMotion>
+  <circle r="3"   fill="#3e4fe0" filter="url(#spark-glow)">
+    <animateMotion dur="1.2s"  begin="0.4s"  repeatCount="indefinite"><mpath href="#p3b"/></animateMotion>
   </circle>
-  <!-- Col 4 -->
-  <circle r="3" fill="#3e4fe0" filter="url(#spark-glow)">
-    <animateMotion dur="0.32s" begin="0.3s" repeatCount="indefinite"><mpath href="#p4b"/></animateMotion>
+  <circle r="3"   fill="#3e4fe0" filter="url(#spark-glow)">
+    <animateMotion dur="0.32s" begin="0.3s"  repeatCount="indefinite"><mpath href="#p4b"/></animateMotion>
   </circle>
-  <circle r="3" fill="#3e4fe0" filter="url(#spark-glow)">
-    <animateMotion dur="1.2s"  begin="0.7s" repeatCount="indefinite"><mpath href="#p4c"/></animateMotion>
+  <circle r="3"   fill="#3e4fe0" filter="url(#spark-glow)">
+    <animateMotion dur="1.2s"  begin="0.7s"  repeatCount="indefinite"><mpath href="#p4c"/></animateMotion>
   </circle>
-  <!-- Return arc -->
-  <circle r="3" fill="#3e4fe0" filter="url(#spark-glow)">
-    <animateMotion dur="5.8s"  begin="0s"   repeatCount="indefinite"><mpath href="#p4d"/></animateMotion>
+  <circle r="3"   fill="#3e4fe0" filter="url(#spark-glow)">
+    <animateMotion dur="5.8s"  begin="0s"    repeatCount="indefinite"><mpath href="#p4d"/></animateMotion>
   </circle>
 </g>
 </svg>
 
-<!-- ══════════════════════════════════════════════════════════════
-     LANE LABELS  — left=40, width=141, centered vertically
-     Lane heights: 156px each, starting y=48
-     ══════════════════════════════════════════════════════════════ -->
+<!-- LANE LABELS -->
 
-<!-- Customer: y=48, h=156, center=126 -->
+<!-- Customer: y=48, h=156 -->
 <div class="lane-label-container" style="top:48px; height:156px;">
   <svg class="lane-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
     <circle cx="12" cy="7" r="4"/>
@@ -292,7 +141,7 @@ body {
   <div class="lane-label">Customer</div>
 </div>
 
-<!-- Issuer: y=204, h=156, center=282 -->
+<!-- Issuer: y=204, h=156 -->
 <div class="lane-label-container" style="top:204px; height:156px;">
   <svg class="lane-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
     <line x1="3" y1="22" x2="21" y2="22"/>
@@ -305,16 +154,16 @@ body {
   <div class="lane-label">Issuer</div>
 </div>
 
-<!-- Acquirer: y=360, h=156, center=438 -->
+<!-- Acquirer: y=360, h=156 -->
 <div class="lane-label-container" style="top:360px; height:156px;">
   <svg class="lane-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
     <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
-    <line x1="1"  y1="10" x2="23" y2="10"/>
+    <line x1="1" y1="10" x2="23" y2="10"/>
   </svg>
   <div class="lane-label">Acquirer</div>
 </div>
 
-<!-- Yuno: y=516, h=156, center=594 -->
+<!-- Yuno: y=516, h=156 -->
 <div class="lane-label-container" style="top:516px; height:156px;">
   <svg width="72" height="15" viewBox="0 0 1920 400" fill="none" xmlns="http://www.w3.org/2000/svg">
     <g clip-path="url(#yuno-logo-clip)">
@@ -367,7 +216,7 @@ body {
   </svg>
 </div>
 
-<!-- Merchant: y=672, h=154, center=749 -->
+<!-- Merchant: y=672, h=154 -->
 <div class="lane-label-container" style="top:672px; height:154px;">
   <svg class="lane-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
     <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
@@ -377,136 +226,104 @@ body {
   <div class="lane-label">Merchant</div>
 </div>
 
-<!-- ══════════════════════════════════════════════════════════════
-     PHASE TAGS (above each column)
-     ══════════════════════════════════════════════════════════════ -->
-
-<!-- ══════════════════════════════════════════════════════════════
-     COLUMN 1  left=211  cx=263
-     ══════════════════════════════════════════════════════════════ -->
-
-<!-- Lane 0 Customer  top=71 -->
+<!-- COLUMN 1 -->
 <div class="step" style="left:228px; top:71px;">
   Customer files a complaint with issuer
   <div class="dot bottom"></div>
 </div>
-
-<!-- Lane 1 Issuer  top=227 -->
 <div class="step" style="left:228px; top:227px;">
   Issuer sends a chargeback for the customer complaint
   <div class="dot top"></div>
   <div class="dot bottom"></div>
 </div>
-
-<!-- Lane 2 Acquirer  top=383 -->
-<div class="step acquirer" style="left:228px; top:383px;">
+<div class="step" style="left:228px; top:383px;">
   Acquirer forwards chargebacks for dispute
   <div class="dot top"></div>
   <div class="dot bottom"></div>
 </div>
-
-<!-- Lane 3 Yuno  top=539 -->
 <div class="step yuno-hl" style="left:228px; top:539px;">
   Yuno receives notification of the chargeback event, updates status &amp; forwards notification to merchant
   <div class="dot top"></div>
   <div class="dot bottom"></div>
 </div>
-
-<!-- Lane 4 Merchant  top=694 -->
-<div class="step merchant" style="left:228px; top:694px;">
+<div class="step" style="left:228px; top:694px;">
   Merchant decides to enter the dispute process
   <div class="dot top"></div>
   <div class="dot right"></div>
 </div>
 
-<!-- ══════════════════════════════════════════════════════════════
-     COLUMN 2  left=531  cx=583
-     ══════════════════════════════════════════════════════════════ -->
-
-<!-- Lane 1 Issuer  top=227 -->
+<!-- COLUMN 2 -->
 <div class="step" style="left:548px; top:227px;">
   Issuer analyses evidence
   <div class="dot bottom"></div>
   <div class="dot top"></div>
 </div>
-
-<!-- Lane 2 Acquirer  top=383 -->
-<div class="step acquirer" style="left:548px; top:383px;">
+<div class="step" style="left:548px; top:383px;">
   Acquirer forwards evidence to issuer
   <div class="dot top"></div>
   <div class="dot bottom"></div>
 </div>
-
-<!-- Lane 3 Yuno  top=539 -->
 <div class="step yuno-hl" style="left:548px; top:539px;">
   Yuno API forwards evidence to acquirer
   <div class="dot top"></div>
   <div class="dot bottom"></div>
 </div>
-
-<!-- Lane 4 Merchant  top=694 -->
-<div class="step merchant" style="left:548px; top:694px;">
+<div class="step" style="left:548px; top:694px;">
   Merchant prepares evidence and submits to Yuno
   <div class="dot left"></div>
   <div class="dot top"></div>
 </div>
 
-<!-- ══════════════════════════════════════════════════════════════
-     COLUMN 3  left=851  cx=903  (Merchant wins)
-     ══════════════════════════════════════════════════════════════ -->
-
-<!-- Lane 1 Issuer  top=227 -->
-<div class="step green" style="left:868px; top:227px;">
+<!-- COLUMN 3 — Merchant wins -->
+<div class="step" style="left:868px; top:227px;">
   Issuer decided in favor of merchant
   <div class="dot top"></div>
   <div class="dot bottom"></div>
 </div>
-
-<!-- Lane 2 Acquirer  top=383 -->
-<div class="step green" style="left:868px; top:383px;">
+<div class="step" style="left:868px; top:383px;">
   Acquirer doesn't deduct chargeback amount from funds
   <div class="dot top"></div>
   <div class="dot bottom"></div>
 </div>
-
-<!-- Lane 4 Merchant  top=694 -->
-<div class="step green" style="left:868px; top:694px;">
+<div class="step" style="left:868px; top:694px;">
   Merchant keeps revenue from transaction
   <div class="dot top"></div>
 </div>
 
-<!-- ══════════════════════════════════════════════════════════════
-     COLUMN 4  left=1171  cx=1223  (Customer wins)
-     ══════════════════════════════════════════════════════════════ -->
-
-<!-- Lane 0 Customer  top=71 -->
-<div class="step red" style="left:1188px; top:71px;">
+<!-- COLUMN 4 — Customer wins -->
+<div class="step" style="left:1188px; top:71px;">
   Customer receives the chargeback amount
   <div class="dot right"></div>
 </div>
-
-<!-- Lane 1 Issuer  top=227 -->
-<div class="step red" style="left:1188px; top:227px;">
+<div class="step" style="left:1188px; top:227px;">
   Issuer decided in favor of customer
   <div class="dot top"></div>
   <div class="dot bottom"></div>
 </div>
-
-<!-- Lane 2 Acquirer  top=383 -->
-<div class="step red" style="left:1188px; top:383px;">
+<div class="step" style="left:1188px; top:383px;">
   Acquirer deducts chargeback from funds
   <div class="dot top"></div>
   <div class="dot bottom"></div>
 </div>
-
-<!-- Lane 4 Merchant  top=694 -->
-<div class="step red" style="left:1188px; top:694px;">
+<div class="step" style="left:1188px; top:694px;">
   Merchant loses revenue from transaction
   <div class="dot top"></div>
   <div class="dot right"></div>
 </div>
 
+<div class="expand-hint">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+    <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
+  </svg>
+  Click to expand
+</div>
+
 </div><!-- .diagram -->
-</div><!-- .scroll-wrapper -->
+</div><!-- .viewport -->
+
+<script src="../../shared/diagrams.js"></script>
+<script>
+  initDiagram(1540, 874, 'https://writechoiceorg.github.io/yuno-diagrams-public/diagrams/payouts-and-disputes/chargeback-management/chargeback-workflow.html', 'Chargeback Workflow');
+</script>
 </body>
 </html>
