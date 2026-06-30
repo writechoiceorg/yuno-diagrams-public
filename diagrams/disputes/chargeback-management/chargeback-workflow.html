@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Yuno – Chargeback Management Flow</title>
+<style>
+/* ── CSS matching diagrams.css pattern ─────────────────────────────── */
+:root {
+  --primary:  #3e4fe0;
+  --merchant: #8b5cf6;
+  --issuer:   #0891b2;
+  --acquirer: #6366f1;
+  --yuno-bdr: #c4b5fd;
+  --green:    #15803d;
+  --red:      #dc2626;
+  --text:     #0a0a0a;
+  --slate:    #64748b;
+  --bg:       #f5f5f5;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #e5e7eb;
+  display: flex; align-items: center; justify-content: center;
+  min-height: 100vh; padding: 24px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, 'Helvetica Neue', Arial, sans-serif;
+}
+
+.scroll-wrapper {
+  overflow-x: auto; overflow-y: hidden;
+  border-radius: 12px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.14);
+  max-width: 100%;
+}
+
+.diagram {
+  position: relative; width: 1540px; height: 874px;
+  background: var(--bg); border-radius: 12px;
+  overflow: hidden; flex-shrink: 0;
+}
+
+.layer-svg {
+  position: absolute; inset: 0;
+  width: 1540px; height: 874px;
+  pointer-events: none;
+}
+
+/* ── Lane labels (matches diagrams.css) ── */
+.lane-label-container {
+  position: absolute;
+  left: 40px; width: 141px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 10px;
+}
+.lane-icon {
+  width: 22px; height: 22px;
+  color: var(--slate); opacity: 0.8; flex-shrink: 0;
+}
+.lane-label {
+  font-size: 13px; font-weight: 700;
+  color: var(--text); line-height: 1.4;
+  text-align: center; white-space: nowrap;
+}
+
+/* ── Step boxes (matches diagrams.css exactly) ── */
+.step {
+  position: absolute;
+  width: 150px; height: 110px;
+  background: #ffffff;
+  border: 1.5px solid var(--primary); border-radius: 8px;
+  box-shadow: -4px -4px 10px 0 #ffffff, 4px 4px 8px 0 rgba(0,0,0,0.10);
+  display: flex; align-items: center; justify-content: center;
+  padding: 10px 8px;
+  font-size: 12px; font-weight: 600; color: var(--text);
+  text-align: center; line-height: 1.25;
+  z-index: 2;
+}
+
+/* Lane variants — all use the same primary blue */
+.step.issuer   { border-color: var(--primary); }
+.step.acquirer { border-color: var(--primary); }
+.step.merchant { border-color: var(--primary); }
+.step.yuno-hl  { background: #eef0fd; border-color: var(--primary); color: var(--primary); }
+
+/* Outcome variants — no colour coding, all use default blue */
+.step.green { border-color: var(--primary); background: #fff; }
+.step.red   { border-color: var(--primary); background: #fff; }
+
+/* ── Numbered bubble ── */
+.bubble {
+  position: absolute; top: -10px; left: -10px;
+  width: 20px; height: 20px;
+  background: var(--primary); color: #fff;
+  border-radius: 999px; font-size: 10px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.15); z-index: 3;
+}
+.step.merchant  .bubble { background: var(--merchant); }
+.step.issuer    .bubble { background: var(--issuer); }
+.step.acquirer  .bubble { background: var(--acquirer); }
+.step.yuno-hl   .bubble { background: var(--primary); color: #fff; }
+
+/* ── Connection dots (matches diagrams.css) ── */
+.dot {
+  position: absolute;
+  width: 6px; height: 6px;
+  background: var(--primary); border-radius: 99px;
+}
+.dot.top    { top: -3px;    left: calc(50% - 3px); }
+.dot.bottom { bottom: -3px; left: calc(50% - 3px); }
+.dot.left   { left: -3px;   top:  calc(50% - 3px); }
+.dot.right  { right: -3px;  top:  calc(50% - 3px); }
+
+/* Dot colors per lane — all primary blue */
+.step.issuer   .dot { background: var(--primary); }
+.step.acquirer .dot { background: var(--primary); }
+.step.merchant .dot { background: var(--primary); }
+.step.yuno-hl  .dot { background: var(--primary); }
+.step.green    .dot { background: var(--primary); }
+.step.red      .dot { background: var(--primary); }
+
+/* ── Phase column tags ── */
+.phase-tag {
+  position: absolute; top: 22px; width: 104px;
+  text-align: center; font-size: 9px; font-weight: 700;
+  color: var(--slate); letter-spacing: 0.07em; text-transform: uppercase;
+}
+.phase-tag.win   { color: var(--slate); }
+.phase-tag.lose  { color: var(--slate); }
+</style>
+</head>
+<body>
+<div class="scroll-wrapper">
+<div class="diagram">
+
+<!-- ══════════════════════════════════════════════════════════════
+     SVG LAYER — card bg · lane lines · connector paths · sparks
+     Canvas: 1540×874  Label panel: x=40→181  Content: x=181→1500
+
+     5 lanes (156px each, y=48→826):
+       Lane 0 Customer  cy=126  box_top=77   box_bottom=175
+       Lane 1 Issuer    cy=282  box_top=233  box_bottom=331
+       Lane 2 Acquirer  cy=438  box_top=389  box_bottom=487
+       Lane 3 Yuno      cy=594  box_top=545  box_bottom=643
+       Lane 4 Merchant  cy=749  box_top=700  box_bottom=798
+
+     4 columns (104px boxes, 241px gap):
+       Col 1  cx=263  left=211
+       Col 2  cx=583  left=531
+       Col 3  cx=903  left=851
+       Col 4  cx=1223 left=1171
+     ══════════════════════════════════════════════════════════════ -->
+<svg class="layer-svg" viewBox="0 0 1540 874" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <filter id="card-shadow">
+    <feDropShadow dx="0" dy="2" stdDeviation="8" flood-color="rgba(0,0,0,0.07)"/>
+  </filter>
+  <filter id="spark-glow" x="-120%" y="-120%" width="340%" height="340%">
+    <feGaussianBlur stdDeviation="2.5" result="blur"/>
+    <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+  <clipPath id="diagram-clip">
+    <rect x="40" y="48" width="1460" height="778" rx="10"/>
+  </clipPath>
+</defs>
+
+<!-- Card background -->
+<rect x="40" y="48" width="1460" height="778" rx="10"
+      fill="#ffffff" opacity="0.8" filter="url(#card-shadow)"/>
+
+<!-- Lane separators -->
+<g stroke="#a3a3a3" stroke-width="1" stroke-dasharray="5 6">
+  <line x1="40"  y1="204" x2="1500" y2="204"/>
+  <line x1="40"  y1="360" x2="1500" y2="360"/>
+  <line x1="40"  y1="516" x2="1500" y2="516"/>
+  <line x1="40"  y1="672" x2="1500" y2="672"/>
+  <line x1="181" y1="48"  x2="181"  y2="826"/>
+</g>
+
+
+<!-- Phase divider between col 2 and col 3 (decision point) -->
+<line x1="822" y1="48" x2="822" y2="826"
+      stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="6 5" opacity="0.4"/>
+
+<!-- ══ COL 1  cx=263  (downward chain) ══
+     box_top=cy-55  box_bottom=cy+55
+     Customer cy=126 top=71 bot=181 | Issuer cy=282 top=227 bot=337
+     Acquirer cy=438 top=383 bot=493 | Yuno cy=594 top=539 bot=649 | Merchant cy=749 top=694 bot=804 -->
+<path id="p1a" d="M 303,181 L 303,227" stroke="#64748b" stroke-width="1.5" fill="none"/>
+<path id="p1b" d="M 303,337 L 303,383" stroke="#64748b" stroke-width="1.5" fill="none"/>
+<path id="p1c" d="M 303,493 L 303,539" stroke="#64748b" stroke-width="1.5" fill="none"/>
+<path id="p1d" d="M 303,649 L 303,694" stroke="#64748b" stroke-width="1.5" fill="none"/>
+
+<!-- Merchant col1 → col2 (right edge of col1=228+150=378, left edge of col2=548) -->
+<path id="ph"  d="M 378,749 L 548,749" stroke="#64748b" stroke-width="1.5" fill="none"/>
+
+<!-- ══ COL 2  cx=623  (upward: Merchant → Issuer) ══ -->
+<path id="p2a" d="M 623,694 L 623,649" stroke="#64748b" stroke-width="1.5" fill="none"/>
+<path id="p2b" d="M 623,539 L 623,493" stroke="#64748b" stroke-width="1.5" fill="none"/>
+<path id="p2c" d="M 623,383 L 623,337" stroke="#64748b" stroke-width="1.5" fill="none"/>
+
+<!-- ══ COL 3  cx=943  (Merchant wins, downward, skips Yuno) ══ -->
+<path id="p3a" d="M 943,337 L 943,383" stroke="#64748b" stroke-width="1.5" fill="none"/>
+<path id="p3b" d="M 943,493 L 943,694" stroke="#64748b" stroke-width="1.5" fill="none"/>
+
+<!-- Issuer col2 → col3 (up, across, drops at col3) -->
+<path id="phi24a" d="M 623,227 L 623,208 L 943,208 L 943,227" stroke="#64748b" stroke-width="1.5" fill="none"/>
+<!-- Issuer col2 → col4 (up, across, drops at col4) -->
+<path id="phi24b" d="M 623,227 L 623,208 L 1263,208 L 1263,227" stroke="#64748b" stroke-width="1.5" fill="none"/>
+
+<!-- ══ COL 4  cx=1263  (Customer wins) ══ -->
+<path id="p4b" d="M 1263,337 L 1263,383" stroke="#64748b" stroke-width="1.5" fill="none"/>
+<path id="p4c" d="M 1263,493 L 1263,694" stroke="#64748b" stroke-width="1.5" fill="none"/>
+
+<!-- Return arc: right edge Merchant col4=1188+150=1338 → right edge Customer col4=1338 -->
+<path id="p4d"
+  d="M 1338,749 L 1438,749 Q 1450,749 1450,737 L 1450,138 Q 1450,126 1438,126 L 1338,126"
+  stroke="#64748b" stroke-width="1.5" fill="none"/>
+
+<!-- ══ SPARK ANIMATIONS — uniform speed ~180px/s
+     58px gaps → 0.32s | 216px horizontals/long verticals → 1.2s | arc ~1055px → 5.8s ══ -->
+<g clip-path="url(#diagram-clip)">
+  <!-- Col 1: downward chain -->
+  <circle r="3.5" fill="#3e4fe0" filter="url(#spark-glow)">
+    <animateMotion dur="0.32s" begin="0s"   repeatCount="indefinite"><mpath href="#p1a"/></animateMotion>
+  </circle>
+  <circle r="3.5" fill="#3e4fe0" filter="url(#spark-glow)">
+    <animateMotion dur="0.32s" begin="0.5s" repeatCount="indefinite"><mpath href="#p1b"/></animateMotion>
+  </circle>
+  <circle r="3.5" fill="#3e4fe0" filter="url(#spark-glow)">
+    <animateMotion dur="0.32s" begin="1.0s" repeatCount="indefinite"><mpath href="#p1c"/></animateMotion>
+  </circle>
+  <circle r="3.5" fill="#3e4fe0" filter="url(#spark-glow)">
+    <animateMotion dur="0.32s" begin="1.5s" repeatCount="indefinite"><mpath href="#p1d"/></animateMotion>
+  </circle>
+  <!-- Merchant horizontal col1→col2 -->
+  <circle r="3.5" fill="#3e4fe0" filter="url(#spark-glow)">
+    <animateMotion dur="1.2s"  begin="2.0s" repeatCount="indefinite"><mpath href="#ph"/></animateMotion>
+  </circle>
+  <!-- Col 2: upward (orange) -->
+  <circle r="3" fill="#3e4fe0" filter="url(#spark-glow)">
+    <animateMotion dur="0.32s" begin="0.25s" repeatCount="indefinite"><mpath href="#p2a"/></animateMotion>
+  </circle>
+  <circle r="3" fill="#3e4fe0" filter="url(#spark-glow)">
+    <animateMotion dur="0.32s" begin="0.75s" repeatCount="indefinite"><mpath href="#p2b"/></animateMotion>
+  </circle>
+  <circle r="3" fill="#3e4fe0" filter="url(#spark-glow)">
+    <animateMotion dur="0.32s" begin="1.25s" repeatCount="indefinite"><mpath href="#p2c"/></animateMotion>
+  </circle>
+  <!-- Issuer horizontal branches -->
+  <circle r="3" fill="#3e4fe0" filter="url(#spark-glow)">
+    <animateMotion dur="2.0s"  begin="0s"   repeatCount="indefinite"><mpath href="#phi24a"/></animateMotion>
+  </circle>
+  <circle r="3" fill="#3e4fe0" filter="url(#spark-glow)">
+    <animateMotion dur="3.8s"  begin="0.6s" repeatCount="indefinite"><mpath href="#phi24b"/></animateMotion>
+  </circle>
+  <!-- Col 3 -->
+  <circle r="3" fill="#3e4fe0" filter="url(#spark-glow)">
+    <animateMotion dur="0.32s" begin="0s"   repeatCount="indefinite"><mpath href="#p3a"/></animateMotion>
+  </circle>
+  <circle r="3" fill="#3e4fe0" filter="url(#spark-glow)">
+    <animateMotion dur="1.2s"  begin="0.4s" repeatCount="indefinite"><mpath href="#p3b"/></animateMotion>
+  </circle>
+  <!-- Col 4 -->
+  <circle r="3" fill="#3e4fe0" filter="url(#spark-glow)">
+    <animateMotion dur="0.32s" begin="0.3s" repeatCount="indefinite"><mpath href="#p4b"/></animateMotion>
+  </circle>
+  <circle r="3" fill="#3e4fe0" filter="url(#spark-glow)">
+    <animateMotion dur="1.2s"  begin="0.7s" repeatCount="indefinite"><mpath href="#p4c"/></animateMotion>
+  </circle>
+  <!-- Return arc -->
+  <circle r="3" fill="#3e4fe0" filter="url(#spark-glow)">
+    <animateMotion dur="5.8s"  begin="0s"   repeatCount="indefinite"><mpath href="#p4d"/></animateMotion>
+  </circle>
+</g>
+</svg>
+
+<!-- ══════════════════════════════════════════════════════════════
+     LANE LABELS  — left=40, width=141, centered vertically
+     Lane heights: 156px each, starting y=48
+     ══════════════════════════════════════════════════════════════ -->
+
+<!-- Customer: y=48, h=156, center=126 -->
+<div class="lane-label-container" style="top:48px; height:156px;">
+  <svg class="lane-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <circle cx="12" cy="7" r="4"/>
+    <path d="M20 21v-2a8 8 0 0 0-16 0v2"/>
+  </svg>
+  <div class="lane-label">Customer</div>
+</div>
+
+<!-- Issuer: y=204, h=156, center=282 -->
+<div class="lane-label-container" style="top:204px; height:156px;">
+  <svg class="lane-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <line x1="3" y1="22" x2="21" y2="22"/>
+    <line x1="6" y1="18" x2="6" y2="11"/>
+    <line x1="10" y1="18" x2="10" y2="11"/>
+    <line x1="14" y1="18" x2="14" y2="11"/>
+    <line x1="18" y1="18" x2="18" y2="11"/>
+    <polygon points="12 2 20 7 4 7"/>
+  </svg>
+  <div class="lane-label">Issuer</div>
+</div>
+
+<!-- Acquirer: y=360, h=156, center=438 -->
+<div class="lane-label-container" style="top:360px; height:156px;">
+  <svg class="lane-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
+    <line x1="1"  y1="10" x2="23" y2="10"/>
+  </svg>
+  <div class="lane-label">Acquirer</div>
+</div>
+
+<!-- Yuno: y=516, h=156, center=594 -->
+<div class="lane-label-container" style="top:516px; height:156px;">
+  <svg width="72" height="15" viewBox="0 0 1920 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <g clip-path="url(#yuno-logo-clip)">
+      <path d="M37.8696 20C28.0088 20 20 28.0241 20 37.9036C20 47.7831 28.0088 55.8072 37.8696 55.8072C47.7304 55.8072 55.7392 47.7831 55.7392 37.9036C55.7392 28.0241 47.7304 20 37.8696 20Z" fill="#3e4fe0"/>
+      <path d="M96.6001 20.0012C86.7393 20.0012 78.7305 28.0253 78.7305 37.9048C78.7305 47.7843 86.7393 55.8084 96.6001 55.8084C106.461 55.8084 114.47 47.7843 114.47 37.9048C114.47 28.0253 106.461 20.0012 96.6001 20.0012Z" fill="#3e4fe0"/>
+      <path d="M155.331 44.7713C159.117 44.7713 162.185 41.6967 162.185 37.9039C162.185 34.1111 159.117 31.0364 155.331 31.0364C151.545 31.0364 148.477 34.1111 148.477 37.9039C148.477 41.6967 151.545 44.7713 155.331 44.7713Z" fill="#3e4fe0"/>
+      <path d="M37.8714 107.881C43.9283 107.881 48.8385 102.962 48.8385 96.8931C48.8385 90.8246 43.9283 85.9052 37.8714 85.9052C31.8144 85.9052 26.9043 90.8246 26.9043 96.8931C26.9043 102.962 31.8144 107.881 37.8714 107.881Z" fill="#3e4fe0"/>
+      <path d="M96.6001 78.9899C86.7393 78.9899 78.7305 87.0139 78.7305 96.8935C78.7305 106.773 86.7393 114.797 96.6001 114.797C106.461 114.797 114.47 106.773 114.47 96.8935C114.47 87.0139 106.461 78.9899 96.6001 78.9899Z" fill="#3e4fe0"/>
+      <path d="M155.332 107.881C161.393 107.881 166.299 102.965 166.299 96.8931C166.299 90.8208 161.393 85.9052 155.332 85.9052C149.272 85.9052 144.365 90.8208 144.365 96.8931C144.365 102.965 149.272 107.881 155.332 107.881Z" fill="#3e4fe0"/>
+      <path d="M37.87 148.845C34.0941 148.845 31.0156 151.929 31.0156 155.712C31.0156 159.495 34.0941 162.58 37.87 162.58C41.646 162.58 44.7245 159.495 44.7245 155.712C44.7245 151.929 41.646 148.845 37.87 148.845Z" fill="#3e4fe0"/>
+      <path d="M96.6001 137.809C86.7393 137.809 78.7305 145.834 78.7305 155.713C78.7305 165.593 86.7393 173.617 96.6001 173.617C106.461 173.617 114.47 165.593 114.47 155.713C114.47 145.834 106.461 137.809 96.6001 137.809Z" fill="#3e4fe0"/>
+      <path d="M155.331 137.809C145.47 137.809 137.461 145.834 137.461 155.713C137.461 165.593 145.47 173.617 155.331 173.617C165.191 173.617 173.2 165.593 173.2 155.713C173.2 145.834 165.191 137.809 155.331 137.809Z" fill="#3e4fe0"/>
+      <path d="M214.159 44.7713C217.935 44.7713 221.014 41.687 221.014 37.9039C221.014 34.1207 217.935 31.0364 214.159 31.0364C210.383 31.0364 207.305 34.1207 207.305 37.9039C207.305 41.687 210.383 44.7713 214.159 44.7713Z" fill="#3e4fe0"/>
+      <path d="M272.894 55.8084C282.763 55.8084 290.764 47.7927 290.764 37.9048C290.764 28.0169 282.763 20.0012 272.894 20.0012C263.025 20.0012 255.024 28.0169 255.024 37.9048C255.024 47.7927 263.025 55.8084 272.894 55.8084Z" fill="#3e4fe0"/>
+      <path d="M331.625 20.0012C321.764 20.0012 313.755 28.0253 313.755 37.9048C313.755 47.7843 321.764 55.8084 331.625 55.8084C341.485 55.8084 349.494 47.7843 349.494 37.9048C349.494 28.0253 341.485 20.0012 331.625 20.0012Z" fill="#3e4fe0"/>
+      <path d="M214.16 107.881C220.221 107.881 225.128 102.965 225.128 96.8931C225.128 90.8208 220.221 85.9052 214.16 85.9052C208.1 85.9052 203.193 90.8208 203.193 96.8931C203.193 102.965 208.1 107.881 214.16 107.881Z" fill="#3e4fe0"/>
+      <path d="M272.894 78.9899C263.033 78.9899 255.024 87.0139 255.024 96.8935C255.024 106.773 263.033 114.797 272.894 114.797C282.755 114.797 290.764 106.773 290.764 96.8935C290.764 87.0139 282.755 78.9899 272.894 78.9899Z" fill="#3e4fe0"/>
+      <path d="M331.626 85.9052C325.566 85.9052 320.659 90.8208 320.659 96.8931C320.659 102.965 325.566 107.881 331.626 107.881C337.687 107.881 342.593 102.965 342.593 96.8931C342.593 90.8208 337.687 85.9052 331.626 85.9052Z" fill="#3e4fe0"/>
+      <path d="M272.894 137.809C263.033 137.809 255.024 145.834 255.024 155.713C255.024 165.593 263.033 173.617 272.894 173.617C282.755 173.617 290.764 165.593 290.764 155.713C290.764 145.834 282.755 137.809 272.894 137.809Z" fill="#3e4fe0"/>
+      <path d="M331.625 162.58C335.411 162.58 338.479 159.505 338.479 155.712C338.479 151.919 335.411 148.845 331.625 148.845C327.839 148.845 324.771 151.919 324.771 155.712C324.771 159.505 327.839 162.58 331.625 162.58Z" fill="#3e4fe0"/>
+      <path d="M214.159 137.809C204.298 137.809 196.289 145.834 196.289 155.713C196.289 165.593 204.298 173.617 214.159 173.617C224.019 173.617 232.028 165.593 232.028 155.713C232.028 145.834 224.019 137.809 214.159 137.809Z" fill="#3e4fe0"/>
+      <path d="M37.87 207.689C34.0941 207.689 31.0156 210.773 31.0156 214.556C31.0156 218.339 34.0941 221.423 37.87 221.423C41.646 221.423 44.7245 218.339 44.7245 214.556C44.7245 210.773 41.646 207.689 37.87 207.689Z" fill="#3e4fe0"/>
+      <path d="M96.6018 203.566C90.5411 203.566 85.6348 208.482 85.6348 214.554C85.6348 220.627 90.5411 225.542 96.6018 225.542C102.663 225.542 107.569 220.627 107.569 214.554C107.569 208.482 102.663 203.566 96.6018 203.566Z" fill="#3e4fe0"/>
+      <path d="M155.331 196.651C145.47 196.651 137.461 204.675 137.461 214.555C137.461 224.434 145.47 232.458 155.331 232.458C165.191 232.458 173.2 224.434 173.2 214.555C173.2 204.675 165.191 196.651 155.331 196.651Z" fill="#3e4fe0"/>
+      <path d="M37.87 266.53C34.0941 266.53 31.0156 269.614 31.0156 273.398C31.0156 277.181 34.0941 280.265 37.87 280.265C41.646 280.265 44.7245 277.181 44.7245 273.398C44.7245 269.614 41.646 266.53 37.87 266.53Z" fill="#3e4fe0"/>
+      <path d="M96.6005 266.53C92.8246 266.53 89.7461 269.614 89.7461 273.398C89.7461 277.181 92.8246 280.265 96.6005 280.265C100.376 280.265 103.455 277.181 103.455 273.398C103.455 269.614 100.376 266.53 96.6005 266.53Z" fill="#3e4fe0"/>
+      <path d="M155.331 255.495C145.47 255.495 137.461 263.519 137.461 273.399C137.461 283.278 145.47 291.302 155.331 291.302C165.191 291.302 173.2 283.278 173.2 273.399C173.2 263.519 165.191 255.495 155.331 255.495Z" fill="#3e4fe0"/>
+      <path d="M37.87 325.519C34.0941 325.519 31.0156 328.603 31.0156 332.386C31.0156 336.169 34.0941 339.254 37.87 339.254C41.646 339.254 44.7245 336.169 44.7245 332.386C44.7245 328.603 41.646 325.519 37.87 325.519Z" fill="#3e4fe0"/>
+      <path d="M96.6005 339.254C100.386 339.254 103.455 336.179 103.455 332.386C103.455 328.594 100.386 325.519 96.6005 325.519C92.8149 325.519 89.7461 328.594 89.7461 332.386C89.7461 336.179 92.8149 339.254 96.6005 339.254Z" fill="#3e4fe0"/>
+      <path d="M155.331 314.484C145.47 314.484 137.461 322.508 137.461 332.387C137.461 342.267 145.47 350.291 155.331 350.291C165.191 350.291 173.2 342.267 173.2 332.387C173.2 322.508 165.191 314.484 155.331 314.484Z" fill="#3e4fe0"/>
+      <path d="M214.159 232.458C224.028 232.458 232.028 224.442 232.028 214.555C232.028 204.667 224.028 196.651 214.159 196.651C204.29 196.651 196.289 204.667 196.289 214.555C196.289 224.442 204.29 232.458 214.159 232.458Z" fill="#3e4fe0"/>
+      <path d="M272.891 203.566C266.83 203.566 261.924 208.482 261.924 214.554C261.924 220.627 266.83 225.542 272.891 225.542C278.952 225.542 283.858 220.627 283.858 214.554C283.858 208.482 278.952 203.566 272.891 203.566Z" fill="#3e4fe0"/>
+      <path d="M331.625 221.423C335.411 221.423 338.479 218.349 338.479 214.556C338.479 210.763 335.411 207.689 331.625 207.689C327.839 207.689 324.771 210.763 324.771 214.556C324.771 218.349 327.839 221.423 331.625 221.423Z" fill="#3e4fe0"/>
+      <path d="M214.159 291.302C224.028 291.302 232.028 283.286 232.028 273.399C232.028 263.511 224.028 255.495 214.159 255.495C204.29 255.495 196.289 263.511 196.289 273.399C196.289 283.286 204.29 291.302 214.159 291.302Z" fill="#3e4fe0"/>
+      <path d="M272.894 280.265C276.68 280.265 279.749 277.19 279.749 273.398C279.749 269.605 276.68 266.53 272.894 266.53C269.109 266.53 266.04 269.605 266.04 273.398C266.04 277.19 269.109 280.265 272.894 280.265Z" fill="#3e4fe0"/>
+      <path d="M331.625 280.265C335.411 280.265 338.479 277.19 338.479 273.398C338.479 269.605 335.411 266.53 331.625 266.53C327.839 266.53 324.771 269.605 324.771 273.398C324.771 277.19 327.839 280.265 331.625 280.265Z" fill="#3e4fe0"/>
+      <path d="M214.159 314.484C204.298 314.484 196.289 322.508 196.289 332.387C196.289 342.267 204.298 350.291 214.159 350.291C224.019 350.291 232.028 342.267 232.028 332.387C232.028 322.508 224.019 314.484 214.159 314.484Z" fill="#3e4fe0"/>
+      <path d="M272.894 339.254C276.68 339.254 279.749 336.179 279.749 332.386C279.749 328.594 276.68 325.519 272.894 325.519C269.109 325.519 266.04 328.594 266.04 332.386C266.04 336.179 269.109 339.254 272.894 339.254Z" fill="#3e4fe0"/>
+      <path d="M331.625 339.254C335.411 339.254 338.479 336.179 338.479 332.386C338.479 328.594 335.411 325.519 331.625 325.519C327.839 325.519 324.771 328.594 324.771 332.386C324.771 336.179 327.839 339.254 331.625 339.254Z" fill="#3e4fe0"/>
+      <path d="M648.466 198.795L555.27 8.48145H461.304L605.03 303.734L566.116 396.747H658.062L815.064 8.48145H723.816L648.466 198.795Z" fill="#3e4fe0"/>
+      <path d="M1076.57 186.747C1076.57 186.747 1042.75 263.132 981.039 241.397C951.312 230.939 948.378 191.229 947.969 182.096V8.602H853.955V216.216C854.027 228.12 854.58 243.253 857.034 251.976C881.253 337.903 977.864 321.47 994.411 317.373C1063.44 300.265 1089.03 232.289 1089.03 232.289V318.457H1170.68V8.57788H1076.57V186.747Z" fill="#3e4fe0"/>
+      <path d="M1873.46 51.5664C1858.21 36.217 1840.2 24.3856 1819.97 16.4579C1770.79 -1.15654 1716.63 -1.15654 1667.44 16.4579C1647.1 24.3374 1628.99 36.1688 1613.59 51.6387C1599.23 66.2652 1588.2 83.47 1580.88 102.699C1573.48 122.337 1569.75 142.988 1569.82 164.024C1569.72 185.036 1573.45 205.518 1580.88 225.036C1588.48 244.819 1599.98 262.506 1615.01 277.542C1630.04 292.578 1647.75 304.096 1667.59 311.735C1691.78 320.868 1717.28 325.253 1743.23 324.819H1743.51H1743.8C1769.9 325.398 1795.51 320.916 1819.92 311.687C1840.1 303.783 1858.16 291.807 1873.44 276.169C1887.82 261.422 1898.86 244.193 1906.27 224.964C1913.67 205.494 1917.38 185.012 1917.3 164.121C1917.38 142.988 1913.65 122.337 1906.24 102.675C1898.93 83.4459 1887.89 66.2411 1873.46 51.5423V51.5664ZM1810.88 208.048L1810.64 208.554C1804.6 221.301 1795.13 232.024 1783.22 239.59L1782.84 239.832C1773.87 245.157 1764.08 248.53 1753.71 249.831C1750.51 250.241 1747.29 250.434 1744.09 250.434C1737 250.434 1729.93 249.422 1723.02 247.422C1713.02 244.506 1703.86 239.663 1695.82 233.012C1687.79 226.362 1681.32 218.265 1676.61 208.94L1676.34 208.41C1669.97 194.53 1666.77 179.133 1667.08 163.88C1666.75 148.603 1669.94 133.181 1676.34 119.301C1682.35 106.386 1691.85 95.6146 1703.88 88.0965L1704.14 87.9278C1713.11 82.5543 1722.9 79.1567 1733.29 77.8314C1743.66 76.5061 1754 77.3013 1764.03 80.217C1774.06 83.1327 1783.22 88.0001 1791.26 94.6989C1799.29 101.374 1805.73 109.518 1810.45 118.844L1810.83 119.687C1816.85 133.735 1819.9 148.578 1819.9 163.88C1819.9 179.181 1816.85 194.024 1810.83 208.072L1810.88 208.048Z" fill="#3e4fe0"/>
+      <path d="M1392.35 9.56657C1323.33 26.675 1297.74 94.6509 1297.74 94.6509V8.48221H1216.08V318.362H1310.19V140.193C1310.19 140.193 1344.01 63.8075 1405.72 85.5425C1435.45 96.0003 1438.38 135.711 1438.79 144.844V318.338H1532.81V110.723C1532.73 98.8196 1532.18 83.687 1529.73 74.9641C1505.51 -10.9636 1408.9 5.47019 1392.35 9.56657Z" fill="#3e4fe0"/>
+    </g>
+    <defs>
+      <clipPath id="yuno-logo-clip">
+        <rect width="1920" height="400" fill="white"/>
+      </clipPath>
+    </defs>
+  </svg>
+</div>
+
+<!-- Merchant: y=672, h=154, center=749 -->
+<div class="lane-label-container" style="top:672px; height:154px;">
+  <svg class="lane-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+    <line x1="3" y1="6" x2="21" y2="6"/>
+    <path d="M16 10a4 4 0 0 1-8 0"/>
+  </svg>
+  <div class="lane-label">Merchant</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     PHASE TAGS (above each column)
+     ══════════════════════════════════════════════════════════════ -->
+
+<!-- ══════════════════════════════════════════════════════════════
+     COLUMN 1  left=211  cx=263
+     ══════════════════════════════════════════════════════════════ -->
+
+<!-- Lane 0 Customer  top=71 -->
+<div class="step" style="left:228px; top:71px;">
+  Customer files a complaint with issuer
+  <div class="dot bottom"></div>
+</div>
+
+<!-- Lane 1 Issuer  top=227 -->
+<div class="step" style="left:228px; top:227px;">
+  Issuer sends a chargeback for the customer complaint
+  <div class="dot top"></div>
+  <div class="dot bottom"></div>
+</div>
+
+<!-- Lane 2 Acquirer  top=383 -->
+<div class="step acquirer" style="left:228px; top:383px;">
+  Acquirer forwards chargebacks for dispute
+  <div class="dot top"></div>
+  <div class="dot bottom"></div>
+</div>
+
+<!-- Lane 3 Yuno  top=539 -->
+<div class="step yuno-hl" style="left:228px; top:539px;">
+  Yuno receives notification of the chargeback event, updates status &amp; forwards notification to merchant
+  <div class="dot top"></div>
+  <div class="dot bottom"></div>
+</div>
+
+<!-- Lane 4 Merchant  top=694 -->
+<div class="step merchant" style="left:228px; top:694px;">
+  Merchant decides to enter the dispute process
+  <div class="dot top"></div>
+  <div class="dot right"></div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     COLUMN 2  left=531  cx=583
+     ══════════════════════════════════════════════════════════════ -->
+
+<!-- Lane 1 Issuer  top=227 -->
+<div class="step" style="left:548px; top:227px;">
+  Issuer analyses evidence
+  <div class="dot bottom"></div>
+  <div class="dot top"></div>
+</div>
+
+<!-- Lane 2 Acquirer  top=383 -->
+<div class="step acquirer" style="left:548px; top:383px;">
+  Acquirer forwards evidence to issuer
+  <div class="dot top"></div>
+  <div class="dot bottom"></div>
+</div>
+
+<!-- Lane 3 Yuno  top=539 -->
+<div class="step yuno-hl" style="left:548px; top:539px;">
+  Yuno API forwards evidence to acquirer
+  <div class="dot top"></div>
+  <div class="dot bottom"></div>
+</div>
+
+<!-- Lane 4 Merchant  top=694 -->
+<div class="step merchant" style="left:548px; top:694px;">
+  Merchant prepares evidence and submits to Yuno
+  <div class="dot left"></div>
+  <div class="dot top"></div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     COLUMN 3  left=851  cx=903  (Merchant wins)
+     ══════════════════════════════════════════════════════════════ -->
+
+<!-- Lane 1 Issuer  top=227 -->
+<div class="step green" style="left:868px; top:227px;">
+  Issuer decided in favor of merchant
+  <div class="dot top"></div>
+  <div class="dot bottom"></div>
+</div>
+
+<!-- Lane 2 Acquirer  top=383 -->
+<div class="step green" style="left:868px; top:383px;">
+  Acquirer doesn't deduct chargeback amount from funds
+  <div class="dot top"></div>
+  <div class="dot bottom"></div>
+</div>
+
+<!-- Lane 4 Merchant  top=694 -->
+<div class="step green" style="left:868px; top:694px;">
+  Merchant keeps revenue from transaction
+  <div class="dot top"></div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     COLUMN 4  left=1171  cx=1223  (Customer wins)
+     ══════════════════════════════════════════════════════════════ -->
+
+<!-- Lane 0 Customer  top=71 -->
+<div class="step red" style="left:1188px; top:71px;">
+  Customer receives the chargeback amount
+  <div class="dot right"></div>
+</div>
+
+<!-- Lane 1 Issuer  top=227 -->
+<div class="step red" style="left:1188px; top:227px;">
+  Issuer decided in favor of customer
+  <div class="dot top"></div>
+  <div class="dot bottom"></div>
+</div>
+
+<!-- Lane 2 Acquirer  top=383 -->
+<div class="step red" style="left:1188px; top:383px;">
+  Acquirer deducts chargeback from funds
+  <div class="dot top"></div>
+  <div class="dot bottom"></div>
+</div>
+
+<!-- Lane 4 Merchant  top=694 -->
+<div class="step red" style="left:1188px; top:694px;">
+  Merchant loses revenue from transaction
+  <div class="dot top"></div>
+  <div class="dot right"></div>
+</div>
+
+</div><!-- .diagram -->
+</div><!-- .scroll-wrapper -->
+</body>
+</html>
